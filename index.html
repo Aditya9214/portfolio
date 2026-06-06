@@ -7,15 +7,33 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:        #070707;
-      --surface:   #101010;
-      --lift:      #181818;
-      --text:      #EEEEEA;
-      --muted:     #555550;
-      --border:    #1C1C1C;
-      --accent:    #C8FF00;
-      --accent-dim: rgba(200,255,0,0.12);
-    }
+  --bg:
+    radial-gradient(
+      circle at top right,
+      rgba(0,120,255,0.18) 0%,
+      rgba(0,120,255,0.08) 15%,
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at top left,
+      rgba(0,80,255,0.10) 0%,
+      transparent 35%
+    ),
+    linear-gradient(
+      135deg,
+      #000000 0%,
+      #050505 50%,
+      #090909 100%
+    );
+
+  --surface: #101010;
+  --lift: #181818;
+  --text: #EEEEEA;
+  --muted: #555550;
+  --border: #1C1C1C;
+  --accent: #C8FF00;
+  --accent-dim: rgba(200,255,0,0.12);
+}
 
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     html { scroll-behavior: smooth; }
