@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio — Motion Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #070707;
+      --surface:   #101010;
+      --lift:      #181818;
+      --text:      #EEEEEA;
+      --muted:     #555550;
+      --border:    #1C1C1C;
+      --accent:    #C8FF00;
+      --accent-dim: rgba(200,255,0,0.12);
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── Grain overlay ── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.028;
+      pointer-events: none;
+      z-index: 9000;
+    }
+
+    /* ── Custom Cursor ── */
+    #cur { position:fixed; width:8px; height:8px; background:var(--accent); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%); transition:width .2s,height .2s; mix-blend-mode:difference; }
+    #cur-ring { position:fixed; width:38px; height:38px; border:1px solid rgba(200,255,0,.4); border-radius:50%; pointer-events:none; z-index:9998; transform:translate(-50%,-50%); }
+
+    /* ── Navigation ── */
+    nav {
+      position: fixed; top:0; width:100%;
+      padding: 26px 52px;
+      display: flex; justify-content:space-between; align-items:center;
+      z-index: 500;
+      mix-blend-mode: difference;
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px; letter-spacing:.12em;
+      text-decoration: none; color: var(--text);
+    }
+    .nav-links { display:flex; gap:36px; list-style:none; }
+    .nav-links a {
+      font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+      text-decoration:none; color:var(--muted);
+      transition: color .3s;
+    }
+    .nav-links a:hover { color:var(--text); }
+
+    /* ── Hero ── */
+    #hero {
+      height: 100vh; display:flex; flex-direction:column;
+      justify-content:flex-end; padding:56px 52px;
+      position:relative; overflow:hidden;
+    }
+
+    .hero-tag {
+      font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+      color:var(--muted); margin-bottom:24px;
+      opacity:0; animation: fadeUp .7s .2s forwards;
+    }
+
+    .hero-name {
+      font-family:'Bebas Neue',sans-serif;
+      font-size: clamp(72px, 13vw, 188px);
+      line-height:.92; letter-spacing:-.01em;
+      overflow:hidden;
+    }
+    .hero-name .line {
+      display:block; opacity:0; transform:translateY(110%);
+    }
+    .hero-name .line:nth-child(1){ animation:revealUp .9s .3s cubic-bezier(.16,1,.3,1) forwards; }
+    .hero-name .line:nth-child(2){ animation:revealUp .9s .44s cubic-bezier(.16,1,.3,1) forwards; color:var(--accent); }
+    .hero-name .line:nth-child(3){ animation:revealUp .9s .58s cubic-bezier(.16,1,.3,1) forwards; }
+
+    .hero-foot {
+      display:flex; justify-content:space-between; align-items:flex-end;
+      margin-top:44px;
+      opacity:0; animation:fadeUp .8s .95s forwards;
+    }
+    .hero-desc {
+      max-width:300px; font-size:14px; line-height:1.75;
+      color:var(--muted);
+    }
+    .hero-scroll {
+      display:flex; align-items:center; gap:14px;
+      font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);
+    }
+    .scroll-bar {
+      width:36px; height:1px; background:var(--muted);
+      transform-origin:left;
+      animation: barPulse 2s 1.8s ease-in-out infinite;
+    }
+
+    .hero-sidebar {
+      position:absolute; right:52px; top:50%; transform:translateY(-50%);
+      writing-mode:vertical-rl; font-size:10px; letter-spacing:.3em;
+      text-transform:uppercase; color:var(--muted);
+      opacity:0; animation:fadeUp 1s 1.3s forwards;
+    }
+
+    /* ── Showreel ── */
+    #showreel { padding:100px 52px; }
+
+    .sec-label {
+      display:flex; align-items:center; gap:14px;
+      font-size:11px; letter-spacing:.24em; text-transform:uppercase;
+      color:var(--accent); margin-bottom:44px;
+    }
+    .sec-label::before { content:''; width:20px; height:1px; background:var(--accent); }
+
+    .reel-wrap {
+      position:relative; width:100%; aspect-ratio:16/9;
+      background:var(--surface); overflow:hidden;
+      border:1px solid var(--border);
+    }
+    .reel-inner {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:24px;
+    }
+    .play-ring {
+      width:88px; height:88px;
+      border:1px solid rgba(200,255,0,.3);
+      border-radius:50%; display:flex;
+      align-items:center; justify-content:center;
+      transition:background .3s, border-color .3s;
+      cursor:none;
+    }
+    .play-ring:hover { background:var(--accent); border-color:var(--accent); }
+    .play-ring:hover .play-ico { fill:var(--bg); }
+    .play-ico { fill:var(--accent); transition:fill .3s; margin-left:5px; }
+
+    .reel-title {
+      font-family:'Bebas Neue',sans-serif;
+      font-size:52px; letter-spacing:.04em; color:var(--muted);
+    }
+    .reel-sub {
+      font-size:11px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--muted);
+    }
+    .reel-tip {
+      position:absolute; bottom:20px; right:24px;
+      font-size:11px; letter-spacing:.12em; color:var(--border);
+      text-transform:uppercase;
+    }
+
+    /* ── Work ── */
+    #work { padding:60px 52px 120px; }
+
+    .work-hd {
+      display:flex; justify-content:space-between; align-items:flex-end;
+      margin-bottom:52px;
+    }
+    .sec-big {
+      font-family:'Bebas Neue',sans-serif;
+      font-size:clamp(44px,6vw,92px);
+      line-height:1; letter-spacing:.02em;
+    }
+    .work-n {
+      font-size:12px; letter-spacing:.12em; color:var(--muted);
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:3px;
+    }
+
+    .item {
+      position:relative; overflow:hidden;
+      background:var(--surface); cursor:none;
+      aspect-ratio:16/9;
+    }
+    .item.wide { grid-column:span 2; aspect-ratio:21/9; }
+
+    .item-thumb {
+      width:100%; height:100%;
+      object-fit:cover; display:block;
+      transition:transform .7s cubic-bezier(.16,1,.3,1);
+    }
+    .item:hover .item-thumb { transform:scale(1.05); }
+
+    /* Placeholder tiles */
+    .item-ph {
+      width:100%; height:100%;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:10px;
+      background:var(--surface);
+    }
+    .item-ph-num {
+      font-family:'Bebas Neue',sans-serif;
+      font-size:72px; color:var(--border);
+      line-height:1;
+    }
+    .item-ph-tag {
+      font-size:10px; letter-spacing:.2em;
+      text-transform:uppercase; color:var(--border);
+    }
+
+    .item-info {
+      position:absolute; inset:0;
+      background:linear-gradient(to top,rgba(7,7,7,.92) 0%,transparent 55%);
+      opacity:0; transition:opacity .4s;
+      display:flex; flex-direction:column;
+      justify-content:flex-end; padding:26px;
+    }
+    .item:hover .item-info { opacity:1; }
+    .item-cat {
+      font-size:10px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--accent);
+      margin-bottom:6px;
+    }
+    .item-title {
+      font-family:'Bebas Neue',sans-serif;
+      font-size:26px; letter-spacing:.04em;
+    }
+    .item-role { font-size:12px; color:var(--muted); margin-top:2px; }
+
+    /* ── About ── */
+    #about {
+      padding:120px 52px;
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:80px;
+      border-top:1px solid var(--border);
+    }
+    .about-hed { font-family:'Bebas Neue',sans-serif; font-size:clamp(44px,5vw,76px); line-height:1; }
+    .about-p { font-size:14px; line-height:1.85; color:var(--muted); margin-top:22px; }
+    .about-badge {
+      display:inline-block; margin-top:28px;
+      padding:10px 20px; border:1px solid var(--border);
+      font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+      color:var(--accent); background:var(--accent-dim);
+    }
+
+    .skills { margin-top:8px; }
+    .sk {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:15px 0; border-bottom:1px solid var(--border);
+      font-size:13px; letter-spacing:.04em;
+    }
+    .sk-lv {
+      font-size:10px; letter-spacing:.18em;
+      text-transform:uppercase; color:var(--accent);
+    }
+
+    /* ── Contact ── */
+    #contact { padding:120px 52px; border-top:1px solid var(--border); }
+    .contact-row { display:flex; justify-content:space-between; align-items:flex-end; }
+    .contact-big {
+      font-family:'Bebas Neue',sans-serif;
+      font-size:clamp(44px,8.5vw,138px);
+      line-height:.92;
+    }
+    .contact-big span { color:var(--accent); }
+    .contact-aside {
+      display:flex; flex-direction:column;
+      gap:14px; align-items:flex-end;
+    }
+    .c-link {
+      font-size:13px; color:var(--muted); text-decoration:none;
+      letter-spacing:.04em; display:flex;
+      align-items:center; gap:10px;
+      transition:color .3s;
+    }
+    .c-link:hover { color:var(--text); }
+    .c-link .arrow { color:var(--accent); font-size:13px; }
+
+    /* ── Footer ── */
+    footer {
+      padding:22px 52px; border-top:1px solid var(--border);
+      display:flex; justify-content:space-between;
+      font-size:11px; letter-spacing:.06em; color:var(--muted);
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(18px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes revealUp {
+      from { opacity:0; transform:translateY(110%); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes barPulse {
+      0%,100% { transform:scaleX(1); opacity:1; }
+      50%     { transform:scaleX(.25); opacity:.25; }
+    }
+
+    /* Scroll reveal */
+    .r { opacity:0; transform:translateY(38px); transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); }
+    .r.vis { opacity:1; transform:translateY(0); }
+    .r.d1 { transition-delay:.1s; }
+    .r.d2 { transition-delay:.2s; }
+    .r.d3 { transition-delay:.3s; }
+  </style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cur"></div>
+<div id="cur-ring"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="#" class="nav-logo">YOUR NAME</a>
+  <ul class="nav-links">
+    <li><a href="#showreel">Reel</a></li>
+    <li><a href="#work">Work</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <p class="hero-tag">Motion Editor · After Effects · Visual Storyteller</p>
+  <h1 class="hero-name">
+    <span class="line">MOTION</span>
+    <span class="line">THAT</span>
+    <span class="line">MOVES.</span>
+  </h1>
+  <div class="hero-foot">
+    <p class="hero-desc">
+      Crafting cinematic sequences and dynamic visual narratives.<br>
+      Based in India — available globally.
+    </p>
+    <div class="hero-scroll">
+      <div class="scroll-bar"></div>
+      Scroll
+    </div>
+  </div>
+  <div class="hero-sidebar">© 2026 · Open to work</div>
+</section>
+
+<!-- ── SHOWREEL ── -->
+<section id="showreel">
+  <div class="sec-label r">Showreel</div>
+  <div class="reel-wrap r d1">
+    <!-- ✏️  Replace the div below with your iframe embed:
+         <iframe src="https://player.vimeo.com/video/YOUR_ID?autoplay=1" ...></iframe>
+         or
+         <iframe src="https://www.youtube.com/embed/YOUR_ID?autoplay=1" ...></iframe>
+    -->
+    <div class="reel-inner">
+      <div class="play-ring" onclick="openReel()">
+        <svg width="26" height="26" viewBox="0 0 24 24">
+          <path class="play-ico" d="M8 5v14l11-7z"/>
+        </svg>
+      </div>
+      <div class="reel-title">SHOWREEL 2026</div>
+      <div class="reel-sub">Click to play</div>
+    </div>
+    <div class="reel-tip">Replace with Vimeo / YouTube embed</div>
+  </div>
+</section>
+
+<!-- ── WORK ── -->
+<section id="work">
+  <div class="work-hd r">
+    <h2 class="sec-big">SELECTED<br>WORK</h2>
+    <div class="work-n">— 06 Projects</div>
+  </div>
+
+  <div class="grid">
+
+    <!-- PROJECT 1 — WIDE (Featured) -->
+    <!-- ✏️  Replace <div class="item-ph"> with <img class="item-thumb" src="YOUR_THUMBNAIL.jpg"> -->
+    <div class="item wide r">
+      <div class="item-ph">
+        <div class="item-ph-num">01</div>
+        <div class="item-ph-tag">Upload your featured thumbnail</div>
+      </div>
+      <div class="item-info">
+        <div class="item-cat">Motion Graphics</div>
+        <div class="item-title">PROJECT TITLE HERE</div>
+        <div class="item-role">After Effects · Compositing · Color</div>
+      </div>
+    </div>
+
+    <!-- PROJECT 2 -->
+    <div class="item r d1">
+      <div class="item-ph">
+        <div class="item-ph-num">02</div>
+        <div class="item-ph-tag">Upload thumbnail</div>
+      </div>
+      <div class="item-info">
+        <div class="item-cat">Video Editing</div>
+        <div class="item-title">PROJECT TITLE</div>
+        <div class="item-role">Premiere Pro · Grade</div>
+      </div>
+    </div>
+
+    <!-- PROJECT 3 -->
+    <div class="item r d2">
+      <div class="item-ph">
+        <div class="item-ph-num">03</div>
+        <div class="item-ph-tag">Upload thumbnail</div>
+      </div>
+      <div class="item-info">
+        <div class="item-cat">Animation</div>
+        <div class="item-title">PROJECT TITLE</div>
+        <div class="item-role">After Effects · Rig</div>
+      </div>
+    </div>
+
+    <!-- PROJECT 4 -->
+    <div class="item r d1">
+      <div class="item-ph">
+        <div class="item-ph-num">04</div>
+        <div class="item-ph-tag">Upload thumbnail</div>
+      </div>
+      <div class="item-info">
+        <div class="item-cat">Brand Film</div>
+        <div class="item-title">PROJECT TITLE</div>
+        <div class="item-role">Direction · Edit</div>
+      </div>
+    </div>
+
+    <!-- PROJECT 5 -->
+    <div class="item r d2">
+      <div class="item-ph">
+        <div class="item-ph-num">05</div>
+        <div class="item-ph-tag">Upload thumbnail</div>
+      </div>
+      <div class="item-info">
+        <div class="item-cat">Kinetic Type</div>
+        <div class="item-title">PROJECT TITLE</div>
+        <div class="item-role">After Effects · Type</div>
+      </div>
+    </div>
+
+    <!-- PROJECT 6 -->
+    <div class="item r d3">
+      <div class="item-ph">
+        <div class="item-ph-num">06</div>
+        <div class="item-ph-tag">Upload thumbnail</div>
+      </div>
+      <div class="item-info">
+        <div class="item-cat">Social / Reels</div>
+        <div class="item-title">PROJECT TITLE</div>
+        <div class="item-role">Short Form · Effects</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── ABOUT ── -->
+<section id="about">
+  <div class="r">
+    <h2 class="about-hed">ABOUT<br>THE<br>CRAFT</h2>
+    <!-- ✏️  Replace with your actual bio below -->
+    <p class="about-p">
+      Apna bio yahan likhein. Apni journey, kya inspire karta hai, kis tarah ke projects mein specialise karte hain — sab clearly explain karein.
+    </p>
+    <p class="about-p">
+      Freelance projects aur brand collaborations ke liye available hoon. Let's build something memorable.
+    </p>
+    <div class="about-badge">Available for work</div>
+  </div>
+
+  <div class="r d1">
+    <div class="skills">
+      <!-- ✏️  Edit skills and levels as needed -->
+      <div class="sk"><span>Adobe After Effects</span><span class="sk-lv">Expert</span></div>
+      <div class="sk"><span>Adobe Premiere Pro</span><span class="sk-lv">Expert</span></div>
+      <div class="sk"><span>Motion Graphics</span><span class="sk-lv">Expert</span></div>
+      <div class="sk"><span>Visual Effects (VFX)</span><span class="sk-lv">Advanced</span></div>
+      <div class="sk"><span>Color Grading</span><span class="sk-lv">Advanced</span></div>
+      <div class="sk"><span>Kinetic Typography</span><span class="sk-lv">Advanced</span></div>
+      <div class="sk"><span>Cinema 4D</span><span class="sk-lv">Intermediate</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CONTACT ── -->
+<section id="contact">
+  <div class="contact-row r">
+    <div class="contact-big">
+      LET'S<br>CREATE<br><span>TOGETHER</span>
+    </div>
+    <div class="contact-aside">
+      <!-- ✏️  Replace links with your actual info -->
+      <a href="mailto:your@email.com" class="c-link">
+        your@email.com <span class="arrow">↗</span>
+      </a>
+      <a href="https://instagram.com/yourhandle" target="_blank" class="c-link">
+        Instagram <span class="arrow">↗</span>
+      </a>
+      <a href="https://linkedin.com/in/yourprofile" target="_blank" class="c-link">
+        LinkedIn <span class="arrow">↗</span>
+      </a>
+      <a href="https://vimeo.com/yourprofile" target="_blank" class="c-link">
+        Vimeo <span class="arrow">↗</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span>Your Name · Motion Editor</span>
+  <span>© 2026 · All Rights Reserved</span>
+</footer>
+
+<script>
+  /* ── Custom Cursor ── */
+  const cur = document.getElementById('cur');
+  const ring = document.getElementById('cur-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cur.style.left = mx + 'px';
+    cur.style.top  = my + 'px';
+  });
+
+  (function animRing() {
+    rx += (mx - rx) * 0.09;
+    ry += (my - ry) * 0.09;
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    requestAnimationFrame(animRing);
+  })();
+
+  document.querySelectorAll('a, .item, .play-ring').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cur.style.width  = '14px'; cur.style.height = '14px';
+      ring.style.width = '58px'; ring.style.height = '58px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cur.style.width  = '8px'; cur.style.height = '8px';
+      ring.style.width = '38px'; ring.style.height = '38px';
+    });
+  });
+
+  /* ── Scroll reveal ── */
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.r').forEach(el => io.observe(el));
+
+  /* ── Showreel placeholder ── */
+  function openReel() {
+    // Replace this function with your actual video embed logic
+    // Example: swap the reel-inner div with a Vimeo/YouTube iframe
+    alert('✏️  Customize: Replace this with your Vimeo or YouTube embed URL in the HTML source.');
+  }
+</script>
+</body>
+</html>
