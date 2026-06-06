@@ -82,11 +82,25 @@
     .nav-links a:hover { color:var(--text); }
 
     /* ── Hero ── */
-    #hero {
-      height: 100vh; display:flex; flex-direction:column;
-      justify-content:flex-end; padding:56px 52px;
-      position:relative; overflow:hidden;
-    }
+    #hero::before {
+  content: '';
+  position: absolute;
+  top: -300px;
+  right: -300px;
+
+  width: 800px;
+  height: 800px;
+
+  background: radial-gradient(
+    circle,
+    rgba(0,120,255,0.25) 0%,
+    rgba(0,120,255,0.12) 30%,
+    transparent 70%
+  );
+
+  filter: blur(80px);
+  pointer-events: none;
+}
 
     .hero-tag {
       font-size:11px; letter-spacing:.22em; text-transform:uppercase;
